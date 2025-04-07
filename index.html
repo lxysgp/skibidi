@@ -42,10 +42,24 @@
       padding: 10px;
       width: 250px;
     }
+    #tutorial {
+      width: 500px;
+      padding: 10px;
+      color: white;
+      background: #222;
+      border: 1px solid lime;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Skibidi Dungeons</h1>
+  <div id="tutorial">
+    <b>Tutorial:</b><br>
+    Use W/A/S/D or arrow keys to move.<br>
+    Fight enemies by moving into them.<br>
+    Collect loot to power up! Defeat the boss to win the level!<br>
+  </div>
   <div id="container">
     <canvas id="game" width="400" height="400"></canvas>
     <div id="right-panel">
@@ -66,6 +80,8 @@
     const enemies = [];
     const items = [];
 
+    let level = 1;
+
     const player = {
       x: Math.floor(Math.random() * cols),
       y: Math.floor(Math.random() * rows),
@@ -83,6 +99,7 @@
 
     function updateHUD() {
       hud.innerHTML = `
+        Level: ${level}<br>
         HP: ${player.hp} / ${player.maxHp}<br>
         Attack: ${player.attack}<br>
         Aura: ${player.aura}<br>
@@ -123,15 +140,18 @@
 
     function spawnEnemies() {
       const enemyTypes = [
-        { char: 'T', hp: 5, attack: 1, name: 'Skibidi Toilet' },
-        { char: 'M', hp: 4, attack: 2, name: 'Mewer' },
-        { char: 'C', hp: 6, attack: 3, name: 'Sigma Caden' }
+        { char: 'T', hp: 5 + level, attack: 1 + level, name: 'Skibidi Toilet' },
+        { char: 'M', hp: 4 + level, attack: 2 + level, name: 'Mewer' },
+        { char: 'C', hp: 6 + level, attack: 3 + level, name: 'Sigma Caden' }
       ];
       for (let i = 0; i < 5; i++) {
         const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         const pos = getRandomEmptyTile();
         enemies.push({ ...type, x: pos.x, y: pos.y });
       }
+      // Boss
+      const boss = { x: 9, y: 9, char: 'B', hp: 15 + level * 3, attack: 5 + level * 2, name: `Boss Lv${level}` };
+      enemies.push(boss);
     }
 
     function spawnItems() {
@@ -188,6 +208,11 @@
         if (enemy.hp <= 0) {
           logMsg(`${enemy.name} defeated!`);
           enemies.splice(enemies.indexOf(enemy), 1);
+          if (enemy.char === 'B') {
+            logMsg('Boss defeated! Proceeding to next level...');
+            setTimeout(nextLevel, 2000);
+            return;
+          }
         } else {
           player.hp -= enemy.attack;
           logMsg(`${enemy.name} counterattacks for ${enemy.attack} damage!`);
@@ -212,12 +237,27 @@
       if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
     }
 
+    function nextLevel() {
+      level++;
+      enemies.length = 0;
+      items.length = 0;
+      player.x = Math.floor(Math.random() * cols);
+      player.y = Math.floor(Math.random() * rows);
+      player.hp = Math.min(player.hp + 5, player.maxHp + 5);
+      player.maxHp += 2;
+      logMsg(`Entering Level ${level}...`);
+      spawnEnemies();
+      spawnItems();
+      updateHUD();
+      draw();
+    }
+
     function startGame() {
       spawnEnemies();
       spawnItems();
       draw();
       updateHUD();
-      logMsg('Welcome to Skibidi Dungeons! Each run is different. Loot up and survive!');
+      logMsg('Welcome to Skibidi Dungeons! Defeat enemies, gather loot, and face the boss!');
     }
 
     document.addEventListener('keydown', handleKey);
