@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skibidi Dungeons</title>
+  <style>
+    body {
+      background-color: black;
+      color: lime;
+      font-family: monospace;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      border: 2px solid lime;
+      margin-top: 20px;
+    }
+    #log {
+      width: 400px;
+      height: 150px;
+      overflow-y: scroll;
+      border: 1px solid lime;
+      margin-top: 10px;
+      padding: 5px;
+      background: #111;
+    }
+    #hud {
+      color: white;
+      background: #111;
+      border: 1px solid lime;
+      padding: 10px;
+      margin-top: 10px;
+      width: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Skibidi Dungeons</h1>
+  <canvas id="game" width="400" height="400"></canvas>
+  <div id="hud"></div>
+  <div id="log"></div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const log = document.getElementById('log');
+    const hud = document.getElementById('hud');
+
+    const tileSize = 40;
+    const rows = 10;
+    const cols = 10;
+    const enemies = [];
+    const items = [];
+
+    const player = {
+      x: 0,
+      y: 0,
+      hp: 10,
+      maxHp: 10,
+      attack: 2,
+      aura: 0,
+      inventory: []
+    };
+
+    function logMsg(msg) {
+      log.innerHTML += `> ${msg}<br>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateHUD() {
+      hud.innerHTML = `
+        HP: ${player.hp} / ${player.maxHp}<br>
+        Attack: ${player.attack}<br>
+        Aura: ${player.aura}<br>
+        Inventory: ${player.inventory.join(', ') || 'Empty'}
+      `;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          ctx.strokeStyle = '#333';
+          ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        }
+      }
+      ctx.fillStyle = 'lime';
+      ctx.fillText('@', player.x * tileSize + 15, player.y * tileSize + 25);
+
+      ctx.fillStyle = 'gold';
+      for (const item of items) {
+        ctx.fillText(item.char, item.x * tileSize + 15, item.y * tileSize + 25);
+      }
+
+      ctx.fillStyle = 'red';
+      for (const e of enemies) {
+        ctx.fillText(e.char, e.x * tileSize + 15, e.y * tileSize + 25);
+      }
+    }
+
+    function spawnEnemies() {
+      enemies.push({ x: 3, y: 3, char: 'T', hp: 5, attack: 1 });
+      enemies.push({ x: 5, y: 2, char: 'M', hp: 4, attack: 2 });
+      enemies.push({ x: 7, y: 6, char: 'C', hp: 6, attack: 3 });
+    }
+
+    function spawnItems() {
+      items.push({ x: 2, y: 4, char: '*', effect: 'aura', value: 1 });
+      items.push({ x: 6, y: 1, char: '!', effect: 'attack', value: 2 });
+      items.push({ x: 8, y: 8, char: '%', effect: 'heal', value: 5 });
+    }
+
+    function pickupItem(x, y) {
+      const item = items.find(i => i.x === x && i.y === y);
+      if (!item) return;
+      items.splice(items.indexOf(item), 1);
+      switch (item.effect) {
+        case 'aura':
+          player.aura += item.value;
+          player.inventory.push('Aura Crystal');
+          logMsg('Picked up an Aura Crystal!');
+          break;
+        case 'attack':
+          player.attack += item.value;
+          player.inventory.push('Toilet Plunger');
+          logMsg('Found a Toilet Plunger! Attack boosted!');
+          break;
+        case 'heal':
+          player.hp = Math.min(player.hp + item.value, player.maxHp);
+          player.inventory.push('Sigma Shades');
+          logMsg('Equipped Sigma Shades. HP restored!');
+          break;
+      }
+    }
+
+    function movePlayer(dx, dy) {
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
+
+      const enemy = enemies.find(e => e.x === nx && e.y === ny);
+      if (enemy) {
+        enemy.hp -= player.attack;
+        logMsg(`You hit ${enemy.char} for ${player.attack} damage! (${enemy.hp} HP left)`);
+        if (enemy.hp <= 0) {
+          logMsg(`${enemy.char} defeated!`);
+          enemies.splice(enemies.indexOf(enemy), 1);
+        } else {
+          player.hp -= enemy.attack;
+          logMsg(`${enemy.char} counterattacks for ${enemy.attack} damage!`);
+          if (player.hp <= 0) {
+            logMsg('You have been defeated! Game Over.');
+            document.removeEventListener('keydown', handleKey);
+          }
+        }
+      } else {
+        player.x = nx;
+        player.y = ny;
+        pickupItem(nx, ny);
+      }
+      updateHUD();
+      draw();
+    }
+
+    function handleKey(e) {
+      if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+      if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+      if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
+      if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+    }
+
+    function startGame() {
+      spawnEnemies();
+      spawnItems();
+      draw();
+      updateHUD();
+      logMsg('Welcome to Skibidi Dungeons! Defeat the Sigma Threats and loot everything.');
+    }
+
+    document.addEventListener('keydown', handleKey);
+    startGame();
+  </script>
+</body>
+</html>
