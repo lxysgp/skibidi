@@ -1,3 +1,91 @@
+<!-- The full updated code is long and exceeds message limits.
+I will split the code into clean parts in the next messages. -->
+
+<!-- Starting with the HTML structure and styling -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Skibidi Dungeons</title>
+  <style>
+    body {
+      background-color: black;
+      color: lime;
+      font-family: monospace;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      border: 2px solid lime;
+      margin-top: 10px;
+    }
+    #hud, #log {
+      background: #111;
+      border: 1px solid lime;
+      padding: 10px;
+      margin: 5px;
+      color: white;
+    }
+    #container {
+      display: flex;
+      gap: 20px;
+    }
+    #infoBox {
+      background: #222;
+      border: 2px solid lime;
+      padding: 10px;
+      width: 300px;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+    }
+    #infoBox button {
+      float: right;
+      background: red;
+      color: white;
+      border: none;
+      padding: 2px 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Skibidi Dungeons</h1>
+
+  <div id="infoBox">
+    <button onclick="document.getElementById('infoBox').style.display='none'">❌</button>
+    <b>Welcome to Skibidi Dungeons!</b><br><br>
+    <b>Controls:</b><br>
+    - Move: WASD or Arrow Keys<br>
+    - Swing Sword: Spacebar<br><br>
+    <b>Symbols:</b><br>
+    `@` - You<br>
+    `🗡️` - Sword<br>
+    `T` - Skibidi Toilet<br>
+    `M` - Mewer<br>
+    `C` - Sigma Caden<br>
+    `B` - Boss<br>
+    `*` - Aura Crystal<br>
+    `!` - Toilet Plunger<br>
+    `%` - Sigma Shades<br>
+    `$` - Toilet Gold<br>
+    `P` - Portal to next level<br>
+    `.` - Floor<br>
+  </div>
+
+  <div id="container">
+    <canvas id="game" width="600" height="600"></canvas>
+    <div>
+      <div id="hud" style="width: 300px;"></div>
+      <div id="log" style="height: 250px; overflow-y: auto; width: 300px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // JavaScript begins here
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const hud = document.getElementById('hud');
