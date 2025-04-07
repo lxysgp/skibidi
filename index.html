@@ -1,107 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Skibidi Dungeons</title>
-  <style>
-    body {
-      background-color: black;
-      color: lime;
-      font-family: monospace;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    canvas {
-      border: 2px solid lime;
-      margin-top: 10px;
-    }
-    #hud, #log {
-      background: #111;
-      border: 1px solid lime;
-      padding: 10px;
-      margin: 5px;
-      color: white;
-    }
-    #container {
-      display: flex;
-      gap: 20px;
-    }
-    #infoBox {
-      background: #222;
-      border: 2px solid lime;
-      padding: 10px;
-      width: 300px;
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1000;
-    }
-    #infoBox button {
-      float: right;
-      background: red;
-      color: white;
-      border: none;
-      padding: 2px 5px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <h1>Skibidi Dungeons</h1>
-
-  <div id="infoBox">
-    <button onclick="document.getElementById('infoBox').style.display='none'">❌</button>
-    <b>Welcome to Skibidi Dungeons!</b><br><br>
-    <b>Controls:</b><br>
-    - Move: WASD or Arrow Keys<br>
-    - Swing Sword: Spacebar<br><br>
-    <b>Symbols:</b><br>
-    `@` - You<br>
-    `T` - Skibidi Toilet<br>
-    `M` - Mewer<br>
-    `C` - Sigma Caden<br>
-    `B` - Boss<br>
-    `*` - Aura Crystal<br>
-    `!` - Toilet Plunger<br>
-    `%` - Sigma Shades<br>
-    `$` - Toilet Gold<br>
-    `.` - Floor<br>
-  </div>
-
-  <div id="container">
-    <canvas id="game" width="400" height="400"></canvas>
-    <div>
-      <div id="hud"></div>
-      <div id="log" style="height: 200px; overflow-y: auto; width: 300px;"></div>
-    </div>
-  </div>
-
-  <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const hud = document.getElementById('hud');
     const log = document.getElementById('log');
 
     const tileSize = 40;
-    const rows = 10;
-    const cols = 10;
+    const rows = 15;
+    const cols = 15;
+
     let level = 1;
     let swordReady = false;
+    let enemies = [];
+    let items = [];
+    let sword = null;
+    let portal = null;
 
     const player = {
       x: 0,
       y: 0,
-      hp: 15,
-      maxHp: 15,
+      hp: 20,
+      maxHp: 20,
       attack: 3,
       aura: 0,
       inventory: []
     };
-
-    const enemies = [];
-    const items = [];
 
     function logMsg(msg) {
       log.innerHTML += `> ${msg}<br>`;
@@ -115,74 +36,90 @@
         Attack: ${player.attack}<br>
         Aura: ${player.aura}<br>
         Inventory: ${player.inventory.join(', ') || 'Empty'}<br>
-        Sword: ${swordReady ? 'Ready! (Space)' : 'Not swung'}
+        Sword: ${swordReady ? 'Ready! (Space)' : 'Not ready'}
       `;
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#444';
       ctx.font = '20px monospace';
+
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
+          ctx.fillStyle = '#333';
           ctx.fillText('.', x * tileSize + 15, y * tileSize + 25);
         }
       }
+
       for (const item of items) {
         ctx.fillStyle = 'gold';
         ctx.fillText(item.char, item.x * tileSize + 15, item.y * tileSize + 25);
       }
+
       for (const e of enemies) {
-        ctx.fillStyle = e.char === 'B' ? 'purple' : 'red';
+        ctx.fillStyle = e.char === 'B' ? 'magenta' : 'red';
         ctx.fillText(e.char, e.x * tileSize + 15, e.y * tileSize + 25);
       }
+
+      if (portal) {
+        ctx.fillStyle = 'cyan';
+        ctx.fillText('P', portal.x * tileSize + 15, portal.y * tileSize + 25);
+      }
+
+      if (sword) {
+        ctx.fillStyle = 'white';
+        ctx.fillText('🗡️', sword.x * tileSize + 15, sword.y * tileSize + 25);
+      }
+
       ctx.fillStyle = 'lime';
       ctx.fillText('@', player.x * tileSize + 15, player.y * tileSize + 25);
     }
 
-    function spawnStuff() {
-      enemies.length = 0;
-      items.length = 0;
+    function spawnLevel() {
+      enemies = [];
+      items = [];
+      sword = null;
+      portal = null;
 
       const enemyChars = ['T', 'M', 'C'];
-      const itemChars = [
+      const itemTypes = [
         { char: '*', effect: 'aura', value: 1, name: 'Aura Crystal' },
         { char: '!', effect: 'attack', value: 2, name: 'Toilet Plunger' },
         { char: '%', effect: 'heal', value: 5, name: 'Sigma Shades' },
         { char: '$', effect: 'aura', value: 2, name: 'Toilet Gold' }
       ];
 
-      // Spawn random enemies
-      for (let i = 0; i < 4 + level; i++) {
-        let x = Math.floor(Math.random() * cols);
-        let y = Math.floor(Math.random() * rows);
+      for (let i = 0; i < 6 + level; i++) {
         enemies.push({
-          x, y,
-          char: enemyChars[Math.floor(Math.random() * enemyChars.length)],
-          hp: 3 + level,
-          attack: 1 + Math.floor(Math.random() * level)
+          x: rand(cols),
+          y: rand(rows),
+          char: enemyChars[rand(enemyChars.length)],
+          hp: 5 + level * 2 + rand(3),
+          attack: 2 + level
         });
       }
 
-      // Boss
       enemies.push({
         x: cols - 2,
         y: rows - 2,
         char: 'B',
-        hp: 10 + level * 2,
-        attack: 3 + level
+        hp: 12 + level * 3,
+        attack: 4 + level
       });
 
-      // Items
-      for (let i = 0; i < 4; i++) {
-        let data = itemChars[Math.floor(Math.random() * itemChars.length)];
-        let x = Math.floor(Math.random() * cols);
-        let y = Math.floor(Math.random() * rows);
-        items.push({ x, y, ...data });
+      for (let i = 0; i < 5; i++) {
+        let it = itemTypes[rand(itemTypes.length)];
+        items.push({ x: rand(cols), y: rand(rows), ...it });
       }
 
       player.x = 0;
       player.y = 0;
+      swordReady = false;
+      sword = null;
+    }
+
+    function rand(n) {
+      return Math.floor(Math.random() * n);
     }
 
     function pickupItem(x, y) {
@@ -201,38 +138,79 @@
     function attackEnemyAt(x, y) {
       const e = enemies.find(e => e.x === x && e.y === y);
       if (!e) return;
+
       if (!swordReady) {
-        logMsg("You must swing your sword (press SPACE)!");
+        logMsg("Swing your sword first! (Press SPACE)");
         return;
       }
+
       e.hp -= player.attack;
       logMsg(`You hit ${e.char} for ${player.attack} damage!`);
       if (e.hp <= 0) {
         logMsg(`${e.char} defeated!`);
         enemies.splice(enemies.indexOf(e), 1);
+
         if (e.char === 'B') {
-          level++;
-          player.maxHp += 5;
-          player.hp = player.maxHp;
-          logMsg(`BOSS DEFEATED! Level ${level} begins!`);
-          spawnStuff();
+          logMsg("You defeated the boss! A portal appears...");
+          portal = { x: e.x, y: e.y };
         }
       } else {
         player.hp -= e.attack;
-        logMsg(`${e.char} strikes back for ${e.attack} damage!`);
+        logMsg(`${e.char} counterattacks for ${e.attack} damage!`);
         if (player.hp <= 0) {
-          logMsg("YOU DIED. Refresh to restart.");
+          logMsg("You died... Refresh to try again.");
           document.removeEventListener('keydown', handleKey);
         }
       }
+
+      sword = null;
       swordReady = false;
+      updateHUD();
+    }
+
+    function movePlayer(dx, dy) {
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
+
+      if (portal && nx === portal.x && ny === portal.y) {
+        level++;
+        player.maxHp += 5;
+        player.hp = player.maxHp;
+        logMsg(`Entering Level ${level}...`);
+        spawnLevel();
+        draw();
+        updateHUD();
+        return;
+      }
+
+      if (enemies.some(e => e.x === nx && e.y === ny)) {
+        attackEnemyAt(nx, ny);
+        return;
+      }
+
+      player.x = nx;
+      player.y = ny;
+      pickupItem(nx, ny);
+      sword = null;
+      draw();
       updateHUD();
     }
 
     function handleKey(e) {
       if (e.key === ' ') {
         swordReady = true;
-        logMsg("Sword ready! Hit an enemy now.");
+        const dirs = [[0,-1],[1,0],[0,1],[-1,0]];
+        for (const [dx, dy] of dirs) {
+          const sx = player.x + dx;
+          const sy = player.y + dy;
+          if (sx >= 0 && sy >= 0 && sx < cols && sy < rows) {
+            sword = { x: sx, y: sy };
+            break;
+          }
+        }
+        logMsg("Sword swung! 🗡️");
+        draw();
         updateHUD();
         return;
       }
@@ -243,26 +221,14 @@
       if (e.key === 'ArrowLeft' || e.key === 'a') dx = -1;
       if (e.key === 'ArrowRight' || e.key === 'd') dx = 1;
 
-      let nx = player.x + dx, ny = player.y + dy;
-      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
-
-      if (enemies.some(e => e.x === nx && e.y === ny)) {
-        attackEnemyAt(nx, ny);
-      } else {
-        player.x = nx;
-        player.y = ny;
-        pickupItem(nx, ny);
-      }
-
-      draw();
-      updateHUD();
+      if (dx || dy) movePlayer(dx, dy);
     }
 
     function startGame() {
-      spawnStuff();
+      spawnLevel();
       draw();
       updateHUD();
-      logMsg("Welcome to Skibidi Dungeons v2!");
+      logMsg("Welcome to Skibidi Dungeons!");
     }
 
     document.addEventListener('keydown', handleKey);
